@@ -7,14 +7,16 @@ from module.logger import logger
 clientData = {}
 client = set()
 
+
 async def SendMessage(websocket, data: str, connection: str = "keep-alive", uuid: str = None) -> None:
     await websocket.send(str({
-            "type": "Server",
-            "connection": connection,
-            "from": uuid,
-            "to": str(websocket.id),
-            "load": data
-        }))
+        "type": "Server",
+        "connection": connection,
+        "from": uuid,
+        "to": str(websocket.id),
+        "load": data
+    }))
+
 
 async def echo(websocket):  # 连接处理函数
     logger.info(f"Connection from {websocket.remote_address[0]}:{websocket.remote_address[1]}, UUID: {websocket.id}")
@@ -46,38 +48,50 @@ async def echo(websocket):  # 连接处理函数
                 message = eval(message)
                 keys = message.keys()
                 if "uuid" not in keys or message["uuid"] != uuid:
-                    client.discard(websocket)
                     await websocket.close(1000, "Invalid uuid")
                 elif "type" not in keys:
-                    client.discard(websocket)
                     await websocket.close(1000, "Invalid type")
-                if "connection" in keys:
-                    if message["connection"] == "close":
-                        client.discard(websocket)
-                        await websocket.close(1000, "Connection close")
-                    elif message["connection"] == "keep-alive":
-                        logger.info(f"[{websocket.id}]: {message['load']}")
+                if "connection" in keys and message["connection"] == "keep-alive":
+                    if "load" in keys:
                         load = message["load"]
-                        if message["broadcast"]:
+                        logger.info(f"[{clientData[uuid]['name']({uuid})}] : {str(load)}")
+                        if "broadcast" in keys and message["broadcast"]:
                             client.discard(websocket)
-                            broadcast(client, str(message))
+                            broadcast(client, str({
+                                "type": "Server",
+                                "connection": "keep-alive",
+                                "from": uuid,
+                                "load": str(load)
+                            }))
                             client.add(websocket)
-                        if 'target' in message.keys() and message['target'] != "":
-                            await clientData[message['target']]['socket'].send(message['load'])
-                        await websocket.send("Success")
+                        elif 'target' in keys and message['target'] != "":
+                            target = message['target']
+                            if isinstance(target, str) and target in clientData.keys():
+                                await SendMessage(clientData[target]['socket'], str(load), uuid=uuid)
+                            elif isinstance(target, list):
+                                for raw in target:
+                                    if raw in clientData.keys():
+                                        await SendMessage(clientData[raw]['socket'], str(load), uuid=uuid)
+                    else:
+                        await websocket.close(1000, "Invalid type")
+                    await websocket.send("Success")
+                else:
+                    await websocket.close(1000, "Connection close")
         else:
             await websocket.close(1000, "The first packet is not ClientHello.")
     except Exception as error:
         logger.error(error)
+        await websocket.close(1001, "Server Error")
     finally:
         if str(websocket.id) in clientData.keys():
             del clientData[str(websocket.id)]
         client.discard(websocket)
+
 
 async def main():
     async with serve(echo, "0.0.0.0", 3000):
         logger.info("Server is running on port 3000")
         await Future()
 
-run(main())
 
+run(main())
