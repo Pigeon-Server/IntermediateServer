@@ -3,6 +3,7 @@ from asyncio.futures import Future
 from websockets import serve
 from websockets.legacy.protocol import broadcast
 from module.logger import logger
+from module.config import config
 
 clientData = {}
 client = set()
@@ -18,7 +19,7 @@ async def SendMessage(websocket, data: str, connection: str = "keep-alive", uuid
     }))
 
 
-async def echo(websocket):  # 连接处理函数
+async def eventHandler(websocket):  # 连接处理函数
     logger.info(f"Connection from {websocket.remote_address[0]}:{websocket.remote_address[1]}, UUID: {websocket.id}")
     try:
         message = eval(await websocket.recv())  # 编码收到的数据
@@ -104,7 +105,7 @@ async def echo(websocket):  # 连接处理函数
             del clientData[str(websocket.id)]
 
 async def main():
-    async with serve(echo, "0.0.0.0", 3000):
+    async with serve(eventHandler, config["Host"], config["Port"]):
         logger.info("Server is running on port 3000")
         await Future()
 
