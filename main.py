@@ -106,7 +106,16 @@ async def eventHandler(websocket):  # 连接处理函数
 
 async def main():
     async with serve(eventHandler, config["Host"], config["Port"]):
-        logger.info("Server is running on port 3000")
+        logger.info(f"Server is running at ws://{config['Host']}:{config['Port']}")
+        logger.info("\n  _____  _                               _____                               \n"
+                    " |  __ \\(_)                             / ____|                              \n"
+                    " | |__) |_   __ _   ___   ___   _ __   | (___    ___  _ __ __   __ ___  _ __ \n"
+                    " |  ___/| | / _` | / _ \\ / _ \\ | '_ \\   \\___ \\  / _ \\| '__|\\ \\ / // _ \\| '__|\n"
+                    " | |    | || (_| ||  __/| (_) || | | |  ____) ||  __/| |    \\ V /|  __/| |   \n"
+                    " |_|    |_| \\__, | \\___| \\___/ |_| |_| |_____/  \\___||_|     \\_/  \\___||_|   \n"
+                    "             __/ |                                                           \n"
+                    "            |___/                                                            "
+                    "\n\n[Github源码库地址，欢迎贡献&完善&Debug]\nhttps://github.com/Pigeon-Server/IntermediateServer.git")
         await Future()
 
 
