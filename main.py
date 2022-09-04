@@ -36,12 +36,24 @@ async def echo(websocket):  # 连接处理函数
                 'socket': websocket
             }  # 记录客户端对应信息
             logger.debug("Sending server handshake packet.")
+            date = {}
+            for raw in clientData:
+                if raw != uuid:
+                    date[raw] = clientData[raw]['name']
             await websocket.send(str({
                 "type": "Server",
                 "load": "ServerHello",
                 "connection": "keep-alive",
-                "uuid": uuid
+                "uuid": uuid,
+                "clientInfo": str(date)
             }))
+            client.discard(websocket)
+            broadcast(client, str({
+                "type": "OnlineBroadcast",
+                "uuid": uuid,
+                "name": message["name"]
+            }))
+            client.add(websocket)
             logger.success("Success. Link established. Waiting for message.")
             async for message in websocket:
                 logger.info(f"Receive message package from {uuid}")
@@ -83,10 +95,13 @@ async def echo(websocket):  # 连接处理函数
         logger.error(error)
         await websocket.close(1001, "Server Error")
     finally:
+        client.discard(websocket)
+        broadcast(client, str({
+            "type": "OfflineBroadcast",
+            "uuid": str(websocket.id)
+        }))
         if str(websocket.id) in clientData.keys():
             del clientData[str(websocket.id)]
-        client.discard(websocket)
-
 
 async def main():
     async with serve(echo, "0.0.0.0", 3000):
