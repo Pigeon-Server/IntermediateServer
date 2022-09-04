@@ -10,6 +10,7 @@ client = set()
 
 
 async def SendMessage(websocket, data: str, connection: str = "keep-alive", uuid: str = None) -> None:
+    logger.info(f"Send message : {data} to {websocket.id}")
     await websocket.send(str({
         "type": "Server",
         "connection": connection,
@@ -49,6 +50,7 @@ async def eventHandler(websocket):  # 连接处理函数
                 "clientInfo": str(date)
             }))
             client.discard(websocket)
+            logger.debug(f"Broadcast ClientOnlineEvent")
             broadcast(client, str({
                 "type": "OnlineBroadcast",
                 "uuid": uuid,
@@ -70,6 +72,7 @@ async def eventHandler(websocket):  # 连接处理函数
                         logger.info(f"[{clientData[uuid]['name']({uuid})}] : {str(load)}")
                         if "broadcast" in keys and message["broadcast"]:
                             client.discard(websocket)
+                            logger.info(f"Broadcast message : {str(load)}")
                             broadcast(client, str({
                                 "type": "Server",
                                 "connection": "keep-alive",
@@ -97,6 +100,7 @@ async def eventHandler(websocket):  # 连接处理函数
         await websocket.close(1001, "Server Error")
     finally:
         client.discard(websocket)
+        logger.debug(f"Broadcast ClientOfflineEvent")
         broadcast(client, str({
             "type": "OfflineBroadcast",
             "uuid": str(websocket.id)
